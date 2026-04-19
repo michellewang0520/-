@@ -1,0 +1,194 @@
+<!DOCTYPE html>  
+<html lang="zh-CN">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Kaiyi HRO - 招聘管理系统 v1.3 (人才预置版)</title>  
+    <script src="https://cdn.tailwindcss.com"></script>  
+    <style>  
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');  
+        body { font-family: 'Inter', 'Microsoft YaHei', sans-serif; background-color: #f8fafc; }  
+        .rounded-card { border-radius: 24px; }  
+        .hro-red-line { border-bottom: 2px solid #ef4444; }  
+        .glass-header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }  
+        .pipeline-step { clip-path: polygon(92% 0, 100% 50%, 92% 100%, 0% 100%, 8% 50%, 0% 0%); }  
+    </style>  
+</head>  
+<body class="h-screen overflow-hidden text-slate-800">  
+  
+    <div id="loginScreen" class="fixed inset-0 z-[100] bg-slate-100 flex items-center justify-center">  
+        <div class="bg-white p-10 rounded-card shadow-2xl w-96 border border-slate-200 text-center">  
+            <div class="w-12 h-2 bg-red-600 rounded-full mx-auto mb-4"></div>  
+            <h2 class="text-2xl font-bold text-slate-900 mb-8">KAIYI HRO v1.3</h2>  
+            <div class="space-y-4">  
+                <input type="text" id="username" placeholder="用户名" class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none text-sm">  
+                <input type="password" id="password" placeholder="密码" class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none text-sm">  
+                <button onclick="handleLogin()" class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition">Jenny 专用登录</button>  
+            </div>  
+        </div>  
+    </div>  
+  
+    <div id="mainApp" class="flex h-screen opacity-0 pointer-events-none transition-opacity duration-700">  
+          
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col">  
+            <div class="p-6 border-b">  
+                <div class="flex items-center justify-between mb-4">  
+                    <h2 class="text-lg font-bold">人才库 (HRO)</h2>  
+                    <button onclick="addNew()" class="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full font-bold">+ 新增</button>  
+                </div>  
+                <div class="flex gap-2">  
+                    <button onclick="exportCSV()" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold">导出备份</button>  
+                    <label class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold text-center cursor-pointer">  
+                        恢复数据 <input type="file" id="importFile" class="hidden" onchange="importCSV(this)">  
+                    </label>  
+                </div>  
+            </div>  
+            <div id="userList" class="flex-1 overflow-y-auto p-4 space-y-3"></div>  
+        </aside>  
+  
+        <main class="flex-1 bg-white border-r border-slate-200 flex flex-col overflow-hidden">  
+            <header class="h-20 px-8 border-b flex items-center justify-between glass-header">  
+                <h1 id="curName" class="text-2xl font-bold italic">请选择候选人</h1>  
+                <div id="fileActions" class="hidden flex gap-3">  
+                    <label class="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-full cursor-pointer hover:bg-slate-200">  
+                        📎 关联 PDF 简历 <input type="file" class="hidden" accept=".pdf" onchange="attachFile(this)">  
+                    </label>  
+                    <button onclick="changeStage('录用审批')" class="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-full shadow-lg">发起审批</button>  
+                </div>  
+            </header>  
+  
+            <div class="flex-1 overflow-y-auto p-10 bg-slate-50/20">  
+                <div id="resumeText" class="bg-white p-10 rounded-card border border-slate-100 shadow-sm max-w-2xl mx-auto mb-6"></div>  
+                <div id="pdfPreview" class="max-w-2xl mx-auto hidden">  
+                    <h4 class="text-[10px] font-black text-slate-400 mb-4 uppercase">PDF 附件预览</h4>  
+                    <iframe id="pdfFrame" class="w-full h-[600px] border rounded-xl shadow-inner"></iframe>  
+                </div>  
+            </div>  
+        </main>  
+  
+        <section class="w-[400px] bg-white p-8 flex flex-col shadow-inner">  
+            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-8 hro-red-line pb-2">Assessment 中心</h3>  
+            <div id="evalForm" class="space-y-6 opacity-0 transition-opacity">  
+                <div class="bg-slate-50 p-5 rounded-2xl">  
+                    <label class="text-[10px] font-bold text-slate-400 mb-2 block">用人部门意见</label>  
+                    <textarea id="f_dept" oninput="save()" class="w-full bg-white rounded-xl p-3 text-sm min-h-[80px] outline-none"></textarea>  
+                </div>  
+                <div class="bg-slate-50 p-5 rounded-2xl">  
+                    <label class="text-[10px] font-bold text-slate-400 mb-2 block">HR 综合评价</label>  
+                    <textarea id="f_hr" oninput="save()" class="w-full bg-white rounded-xl p-3 text-sm min-h-[80px] outline-none"></textarea>  
+                </div>  
+                <div class="bg-slate-900 p-6 rounded-3xl text-white">  
+                    <label class="text-[10px] font-bold text-red-500 mb-2 block uppercase">集团负责人最终签批</label>  
+                    <textarea id="f_boss" oninput="save()" class="w-full bg-slate-800 text-white rounded-xl p-3 text-sm min-h-[100px] outline-none border-none"></textarea>  
+                </div>  
+            </div>  
+        </section>  
+    </div>  
+  
+    <script>  
+        function handleLogin() {  
+            if(document.getElementById('username').value === 'Jenny' && document.getElementById('password').value === '123456') {  
+                document.getElementById('loginScreen').style.display = 'none';  
+                document.getElementById('mainApp').classList.remove('pointer-events-none', 'opacity-0');  
+                render();  
+            }  
+        }  
+  
+        // 预置马林骏和姚明辰的数据  
+        let data = JSON.parse(localStorage.getItem('kaiyi_v13_db')) || [  
+            { id: 101, name: "馬林駿", info: "芝加哥大学 · 2026届硕士", stage: "复试中", resume: "<b>核心履历：</b><br>芝加哥大学应用数据科学硕士。曾在东方证券资产管理部实习，参与港股IPO研究。精通Python及数据建模，持有香港身份证，非常匹配HRO跨境业务。", comm: { dept: "", hr: "", boss: "" }, pdf: "" },  
+            { id: 102, name: "姚明辰", info: "南加州大学 · 2026届硕士", stage: "初试中", resume: "<b>核心履历：</b><br>南加州大学公共管理硕士。具备跨文化沟通能力，精通主流AI工具应用及飞书/钉钉流程配置，在开弈信息科技有相关实习经验。", comm: { dept: "", hr: "", boss: "" }, pdf: "" }  
+        ];  
+        let idx = -1;  
+  
+        function render() {  
+            const list = document.getElementById('userList');  
+            list.innerHTML = data.map((d, i) => `  
+                <div onclick="select(${i})" class="p-5 rounded-card border transition-all cursor-pointer ${idx === i ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100 hover:border-slate-300'}">  
+                    <div class="flex justify-between items-center mb-1">  
+                        <span class="font-bold text-sm text-slate-900">${d.name}</span>  
+                        <span class="text-[9px] px-2 py-0.5 bg-slate-100 rounded-full font-bold text-slate-400">${d.stage}</span>  
+                    </div>  
+                    <p class="text-[10px] text-slate-400">${d.info}</p>  
+                </div>  
+            `).join('');  
+            localStorage.setItem('kaiyi_v13_db', JSON.stringify(data));  
+        }  
+  
+        function select(i) {  
+            idx = i;  
+            const target = data[i];  
+            document.getElementById('curName').innerText = target.name;  
+            document.getElementById('fileActions').classList.remove('hidden');  
+            document.getElementById('evalForm').classList.remove('opacity-0');  
+            document.getElementById('resumeText').innerHTML = `<h4 class="text-[10px] font-black text-red-500 uppercase tracking-widest mb-4">Core Profile</h4><p class="text-sm leading-relaxed text-slate-700">${target.resume}</p>`;  
+              
+            // 附件预览逻辑  
+            const pdfView = document.getElementById('pdfPreview');  
+            if(target.pdf) {  
+                pdfView.classList.remove('hidden');  
+                document.getElementById('pdfFrame').src = target.pdf;  
+            } else {  
+                pdfView.classList.add('hidden');  
+            }  
+  
+            document.getElementById('f_dept').value = target.comm.dept;  
+            document.getElementById('f_hr').value = target.comm.hr;  
+            document.getElementById('f_boss').value = target.comm.boss;  
+            render();  
+        }  
+  
+        function save() {  
+            if(idx === -1) return;  
+            data[idx].comm.dept = document.getElementById('f_dept').value;  
+            data[idx].comm.hr = document.getElementById('f_hr').value;  
+            data[idx].comm.boss = document.getElementById('f_boss').value;  
+            localStorage.setItem('kaiyi_v13_db', JSON.stringify(data));  
+        }  
+  
+        // 处理 PDF 关联  
+        function attachFile(input) {  
+            const file = input.files[0];  
+            if(file && file.type === "application/pdf") {  
+                const reader = new FileReader();  
+                reader.onload = function(e) {  
+                    data[idx].pdf = e.target.result;  
+                    render();  
+                    select(idx);  
+                    alert("PDF 简历已成功关联至该候选人！");  
+                };  
+                reader.readAsDataURL(file);  
+            }  
+        }  
+  
+        function addNew() {  
+            const n = prompt("输入候选人姓名:");  
+            if(n) { data.unshift({ id: Date.now(), name: n, info: "待完善信息", stage: "简历筛选", resume: "暂无详情", comm: { dept: "", hr: "", boss: "" }, pdf: "" }); render(); }  
+        }  
+  
+        function changeStage(s) { if(idx !== -1) { data[idx].stage = s; render(); } }  
+  
+        function exportCSV() {  
+            let csv = "\ufeff姓名,信息,阶段,详情,部门意见,HR意见,签批,PDFBase64\n";  
+            data.forEach(d => { csv += `"${d.name}","${d.info}","${d.stage}","${d.resume}","${d.comm.dept}","${d.comm.hr}","${d.comm.boss}","${d.pdf}"\n`; });  
+            const a = document.createElement("a");  
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));  
+            a.download = "Kaiyi_Full_Backup.csv";  
+            a.click();  
+        }  
+  
+        function importCSV(input) {  
+            const reader = new FileReader();  
+            reader.onload = function(e) {  
+                const rows = e.target.result.split('\n').slice(1);  
+                const newData = rows.filter(r => r).map(row => {  
+                    const cols = row.split('","').map(c => c.replace(/"/g, ''));  
+                    return { id: Date.now()+Math.random(), name: cols[0], info: cols[1], stage: cols[2], resume: cols[3], comm: { dept: cols[4], hr: cols[5], boss: cols[6] }, pdf: cols[7] || "" };  
+                });  
+                if(confirm("确定恢复备份？")) { data = newData; render(); }  
+            };  
+            reader.readAsText(input.files[0]);  
+        }  
+    </script>  
+</body>  
+</html>  
